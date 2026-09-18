@@ -27,6 +27,9 @@ while True:
 
     #   Mostra o resultado na tela 
     print(f"O resultado é: {resultado}")
+    # Salva o histórico no arquivo
+    with open("historico.txt", "a") as arquivo:
+        arquivo.write(f"{num1} {operacao} {num2} = {resultado}\n")
     # Pergunta se o usuário quer continuar
     continuar = input("Deseja fazer outra opeação? (s/n): ")
 
