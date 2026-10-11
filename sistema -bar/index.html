@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Bar - Teste NFC</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+        h1 { color: #333; }
+        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button { padding: 10px 15px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        #btnLer { background-color: #007bff; color: white; }
+        #btnGravar { background-color: #28a745; color: white; }
+        input { padding: 8px; font-size: 16px; width: 80%; margin-top: 10px; }
+        #status { font-weight: bold; margin-bottom: 10px; }
+        #resultado { font-size: 18px; color: #555; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>🏪 Sistema Bar - Teste NFC</h1>
+
+    <div class="card">
+        <div id="status">Verificando suporte a NFC...</div>
+    </div>
+
+    <div class="card">
+        <h3>1. Ler Cartão (Bar/Lanchonete)</h3>
+        <button id="btnLer">📖 Ler Cartão</button>
+        <div id="resultado">Aguardando leitura...</div>
+    </div>
+
+    <div class="card">
+        <h3>2. Gravar Saldo (Caixa)</h3>
+        <input type="number" id="inputSaldo" placeholder="Ex: 200.00" step="0.01">
+        <button id="btnGravar">💾 Gravar no Cartão</button>
+    </div>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultadoDiv = document.getElementById('resultado');
+
+        // 1. Verificar se o navegador suporta Web NFC
+        if (!('NDEFReader' in window)) {
+            statusDiv.textContent = '❌ Web NFC NÃO é suportado neste navegador. Use o Chrome no Android.';
+            statusDiv.style.color = 'red';
+        } else {
+            statusDiv.textContent = '✅ Web NFC suportado! Pronto para ler.';
+            statusDiv.style.color = 'green';
+        }
+
+        // 2. Lógica de Leitura
+        document.getElementById('btnLer').addEventListener('click', async () => {
+            if (!('NDEFReader' in window)) return alert('NFC não suportado');
+
+            try {
+                const ndef = new NDEFReader();
+                await ndef.scan();
+                statusDiv.textContent = '📡 Aproxime o cartão para ler...';
+
+                ndef.onreading = event => {
+                    const decoder = new TextDecoder();
+                    for (const record of event.message.records) {
+                        if (record.recordType === "text") {
+                            const text = decoder.decode(record.data);
+                            try {
+                                // Tenta interpretar como JSON
+                                const dados = JSON.parse(text);
+                                resultadoDiv.innerHTML = `
+                                    <strong>ID:</strong> ${dados.id || 'N/A'}<br>
+                                    <strong>Saldo:</strong> R$ ${dados.saldo ? dados.saldo.toFixed(2) : '0.00'}<br>
+                                    <strong>Hash:</strong> ${dados.hash || 'Nenhum'}
+                                `;
+                            } catch (e) {
+                                // Se não for JSON, mostra o texto puro
+                                resultadoDiv.textContent = `Texto lido: ${text}`;
+                            }
+                        }
+                    }
+                };
+            } catch (error) {
+                statusDiv.textContent = `❌ Erro ao ler: ${error}`;
+                statusDiv.style.color = 'red';
+            }
+        });
+
+        // 3. Lógica de Gravação
+        document.getElementById('btnGravar').addEventListener('click', async () => {
+            if (!('NDEFReader' in window)) return alert('NFC não suportado');
+
+            const saldo = parseFloat(document.getElementById('inputSaldo').value);
+            if (isNaN(saldo) || saldo < 0) return alert('Digite um valor válido');
+
+            try {
+                const ndef = new NDEFReader();
+                
+                // Estrutura de dados que será gravada no cartão
+                // Em um sistema real, o ID viria do UID do cartão
+                const dadosParaGravar = {
+                    id: "CARTÃO_001", 
+                    saldo: saldo,
+                    hash: "exemplo_hash_123" // Aqui entraria o cálculo do hash real
+                };
+
+                await ndef.write({
+                    records: [{ 
+                        recordType: "text", 
+                        data: JSON.stringify(dadosParaGravar) 
+                    }]
+                });
+
+                statusDiv.textContent = '✅ Gravado com sucesso!';
+                statusDiv.style.color = 'green';
+            } catch (error) {
+                statusDiv.textContent = `❌ Erro ao gravar: ${error}`;
+                statusDiv.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>
